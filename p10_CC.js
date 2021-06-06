@@ -420,7 +420,7 @@ function drawBicycle(x, y, size) {
     translate(x, y);
     scale(size);
     for (let i = 100; i >= 0; i--) {
-        let c = lerpColor(color('#aedcf0'), color(255, 0), i / 100);
+        let c = lerpColor(color('#d6f3ff'), color(255, 0), i / 100);
         fill(c);
         ellipse(0, 0, 5 * i, 3 * i);
     }
@@ -550,10 +550,8 @@ function createUI() {
     image(img_hangang, imgStartX, imgStartY, imgWidth, imgHeight);
 
     noStroke();
-    fill(235);
-    // rect(0, 0, width, 100);
     fill(255);
-    rect(0, 50, width, 50, 50, 50, 0, 0);
+    rect(0, 50, width, 350, 50, 50, 0, 0);
 
     if (date.getHours() >= 8 && date.getHours() <= 17) {
         fill(0);
@@ -573,61 +571,9 @@ function createUI() {
 }
 
 function mouseClicked() {
-    print(totalSum, existSum);
-    print(maxPercentId, minPercentId);
-    print(existGap);
-    print(changeList);
-    // print(mouseX, mouseY);
-    // print(imgHeight);
-    // print(imgEndY);
-    //
-    // for (let data of stations.values()) {
-    //     let px = map(data.lng, 127.15859985, 126.81932831, imgEndX, imgStartX);
-    //     let py = map(data.lat, 37.51083755, 37.5841713, imgEndY - 128 * imgHeight / 837, imgStartY + 354 * imgHeight / 837);
-    //     print(px + "/" + data.lat +","+py+"/"+data.lng);
-    // }
-    print(stations);
-
-    // print("minLat:" + minLat + "/" + minLatItem);
-    // print("maxLat:" + maxLat + "/" + maxLatItem);
-    // print("minLng:" + minLng + "/" + minLngItem);
-    // print("maxLng:" + maxLng + "/" + maxLngItem);
-    // print(imgHeight)
-
     if (!clicked) {
         clicked = true;
         push_frame = frameCount;
     }
 
-}
-
-function getInverseColor(colorString) {
-    let c = color(colorString);
-    let r = 255 - red(c);
-    let g = 255 - green(c);
-    let b = 255 - blue(c);
-
-    return color(r, g, b);
-}
-
-function mouseWheel(event) {
-    // if (event.delta < 0  && barrierRadius < 400) {
-    //     barrierRadius += 2;
-    // } else if (event.delta > 0 && barrierRadius > 100) { // minimum barrier radius 70
-    //     barrierRadius -= 2;
-    // }
-}
-
-function getData() {
-
-}
-
-function keyPressed(key) {
-    switch (key.key) {
-
-    }
-}
-
-function getRandomInt(min, max) {
-    return Math.floor(random(min, max + 1));
 }
