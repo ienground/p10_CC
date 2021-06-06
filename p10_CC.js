@@ -34,6 +34,8 @@ let maxLng = -9999.0;
 let minLatItem, maxLatItem, minLngItem, maxLngItem;
 let imgStartX, imgEndX, imgStartY, imgEndY, imgWidth, imgHeight;
 let date;
+let totalSum = 0, existSum = 0;
+let maxPercentId = -1, minPercentId = -1;
 
 // 초반 서울자전거 로고
 let theta = 0; // 시작값, 의미없는 숫자
@@ -55,6 +57,11 @@ let hipx = -27, hipy = -5; // 엉덩이(자전거 안장) 좌표
 let kneex = 14, kneey = 4; // 무릎의 y좌표는 움직이는 중심
 let pedalx = -6, pedaly = 47, pedalr = 11; // 페달이 그리는 원의 중심과 발 돌아가는 반지름
 let feet = 15; let feetrange = 10 // 다리 두께와 무릎 가동범위
+
+// 증감
+let isExistChange = false;
+let existGap = 0;
+let changeList = [];
 
 // 이미지 리소스
 let img_hangang, img_bike, img_wheel, img_cloud1, img_cloud2, img_body;
@@ -84,6 +91,13 @@ function preload() {
                 let totalCount = parseInt(item["rackTotCnt"]);
                 let lat = parseFloat(item["stationLatitude"]);
                 let lng = parseFloat(item["stationLongitude"]);
+
+                if (parkingCount >= totalCount) {
+                    parkingCount = totalCount;
+                }
+
+                totalSum += totalCount;
+                existSum += parkingCount;
 
                 if (lat > maxLat) {
                     maxLat = lat;
@@ -127,11 +141,11 @@ function preload() {
     }
 
     img_hangang = loadImage("assets/hangang.png");
-    bike = loadImage("assets/bike.png");
-    wheel = loadImage("assets/wheel.png");
-    cloud1 = loadImage("assets/cloud1.png");
-    cloud2 = loadImage("assets/cloud2.png");
-    body = loadImage("assets/body.png");
+    img_bike = loadImage("assets/bike.png");
+    img_wheel = loadImage("assets/wheel.png");
+    img_cloud1 = loadImage("assets/cloud1.png");
+    img_cloud2 = loadImage("assets/cloud2.png");
+    img_body = loadImage("assets/body.png");
 }
 
 function setup() {
@@ -160,6 +174,27 @@ function setup() {
         imgWidth = widthOfFullHeight;
         imgHeight = height - 100;
     }
+
+    let index = 0;
+    stations.forEach(function (value, key, map) {
+        // print(index);
+        if (index === 0) {
+            maxPercentId = value.id;
+            minPercentId = value.id;
+        } else {
+            let maxItem = stations.get(maxPercentId);
+            let minItem = stations.get(minPercentId);
+
+            if (maxItem.parkingCount / maxItem.totalCount > value.parkingCount / value.totalCount) {
+                maxPercentId = value.id;
+            }
+
+            if (minItem.parkingCount / minItem.totalCount < value.parkingCount / value.totalCount) {
+                minPercentId = value.id;
+            }
+        }
+        index++;
+    })
 }
 
 function draw() {
@@ -190,12 +225,19 @@ function draw() {
 
             colorMode(RGB);
             background(20);
-            // drawSkyBackground(date.getHours(), date.getMinutes());
+            drawSkyBackground(date.getHours(), date.getMinutes());
             //
             //
             // // 1분에 한 번씩 update.
             //
-            if (frameCount % (60 * 60) === 0) {
+            if (frameCount % (5 * 60) === 0) {
+                let oldExistSum = existSum;
+                let oldStations = stations;
+                totalSum = 0;
+                existSum = 0;
+
+                changeList = [];
+
                 for (let i = 0; i < 3; i++) {
                     let requestURL = "http://openapi.seoul.go.kr:8088/4f5a634b50657269373353434c6745/json/bikeList/" + (i * 1000 + 1) + "/" + ((i + 1) * 1000);
                     let request = new XMLHttpRequest();
@@ -211,10 +253,17 @@ function draw() {
                             let stationName = item["stationName"].split(".")[1].trim();
                             if (!checked_id.includes(parseInt(id))) continue;
 
-                            let parkingCount = item["parkingBikeTotCnt"];
-                            let totalCount = item["rackTotCnt"];
-                            let lat = item["stationLatitude"];
-                            let lng = item["stationLongitude"];
+                            let parkingCount = parseInt(item["parkingBikeTotCnt"]);
+                            let totalCount = parseInt(item["rackTotCnt"]);
+                            let lat = parseFloat(item["stationLatitude"]);
+                            let lng = parseFloat(item["stationLongitude"]);
+
+                            if (parkingCount >= totalCount) {
+                                parkingCount = totalCount;
+                            }
+
+                            totalSum += totalCount;
+                            existSum += parkingCount;
 
                             if (lat > maxLat) {
                                 maxLat = lat;
@@ -239,7 +288,35 @@ function draw() {
                             stations.set(id, new Station(id, stationName, lat, lng, totalCount, parkingCount));
                         }
                     }
+
+
                 }
+
+                let index = 0;
+                stations.forEach(function (value, key, map) {
+                    if (index === 0) {
+                        maxPercentId = value.id;
+                        minPercentId = value.id;
+                    } else {
+                        let maxItem = stations.get(maxPercentId);
+                        let minItem = stations.get(minPercentId);
+
+                        if (maxItem.parkingCount / maxItem.totalCount > value.parkingCount / value.totalCount) {
+                            maxPercentId = value.id;
+                        }
+
+                        if (minItem.parkingCount / minItem.totalCount < value.parkingCount / value.totalCount) {
+                            minPercentId = value.id;
+                        }
+                    }
+
+                    if (stations.get(key).parkingCount !== oldStations.get(key).parkingCount) {
+                        changeList.push(key);
+                    }
+                    index++;
+                })
+
+                print(oldExistSum, changeList);
             }
 
 
@@ -251,20 +328,71 @@ function draw() {
             push();
             translate(opx, opy);
             rotate(-1);
+            let index = 0;
             for (let data of stations.values()) {
                 let px = map(data.lng, 127.15859985, 126.81932831, imgEndX, imgStartX);
                 let py = map(data.lat, 37.51083755, 37.5841713, imgEndY - 128 * imgHeight / 837, imgStartY + 354 * imgHeight / 837);
 
-                fill(255, 0, 0);
-                circle(px - opx, py - opy, 10);
+                let parkingCount = data.parkingCount;
+                let totalCount = data.totalCount;
+
+                if (parkingCount >= totalCount) {
+                    parkingCount = totalCount;
+                }
+
+                let c = lerpColor(color(255, 0, 0, 75), color(0, 255, 0, 75), parkingCount / totalCount);
+
+                fill(c);
+
+                let centerX = px - opx - 3;
+                let centerY = py - opy - 3;
+                let direction;
+                if (index % 2 === 0) {
+                    direction = 1;
+                } else {
+                    direction = -1;
+                }
+
+                circle(centerX + 5 * cos(2 * frameCount + 3 * index), centerY + 5 * sin(direction * (2 * frameCount + 3 * index)), 50);
+
                 fill(0);
                 textAlign(CENTER);
                 // text(data.stationName, px - opx, py - opy - 10);
+                index++;
             }
             pop();
 
             // 자전거 타는 사람
             drawBicycle(width - 150, 200, 0.8);
+
+            // 가동율
+            fill(0);
+            textFont(gmSansBold);
+            textAlign(LEFT, TOP);
+            textSize(80);
+            if (!isNaN(existSum) && !isNaN(totalSum) && totalSum !== 0) {
+                text(round(100 - existSum * 100 / totalSum) + "%", 30, 80);
+            } else {
+                text("-%", 30, 80);
+            }
+
+
+            textFont(gmSansMedium);
+            textSize(20);
+            text((totalSum - existSum) + "대의 따릉이가 운용중이에요!", 30, 165);
+
+            textFont(gmSansBold);
+            textSize(25);
+            text("가장 분주한 ", 240, 90);
+            text("가장 널널한 ", 240, 120);
+
+            let tWidth = textWidth("가장 분주한 ");
+            let maxItem = stations.get(maxPercentId);
+            let minItem = stations.get(minPercentId);
+
+            textFont(gmSansMedium);
+            text(maxItem.stationName + " " + round(100 - 100 * maxItem.parkingCount / maxItem.totalCount) + "% (" + maxItem.parkingCount + "대 남음)", 240 + tWidth, 90);
+            text(minItem.stationName + " " + round(100 - 100 * minItem.parkingCount / minItem.totalCount) + "% (" + minItem.parkingCount + "대 남음)", 240 + tWidth, 120);
 
 
         }
@@ -292,7 +420,7 @@ function drawBicycle(x, y, size) {
     translate(x, y);
     scale(size);
     for (let i = 100; i >= 0; i--) {
-        let c = lerpColor(color('#aedcf0'), color(255), i / 100);
+        let c = lerpColor(color('#aedcf0'), color(255, 0), i / 100);
         fill(c);
         ellipse(0, 0, 5 * i, 3 * i);
     }
@@ -315,8 +443,8 @@ function drawBicycle(x, y, size) {
         c2x -= 1;
     }
 
-    image(cloud1, c1x, c1y,135,90); // 구름
-    image(cloud2, c2x, c2y,135,90);
+    image(img_cloud1, c1x, c1y,135,90); // 구름
+    image(img_cloud2, c2x, c2y,135,90);
 
     let knee1 = kneey + map(sin(theta),-1,1, -feetrange, feetrange); // 다리 가동 범위
     let knee2 = kneey + map(cos(theta),-1,1, -feetrange, feetrange);
@@ -329,23 +457,23 @@ function drawBicycle(x, y, size) {
     push();
     translate(-44,46);
     rotate(theta);
-    image(wheel, 0, 0, 53,53); // 돌아가는 바퀴
+    image(img_wheel, 0, 0, 53,53); // 돌아가는 바퀴
     pop();
 
     push();
     translate(52,46);
     rotate(theta);
-    image(wheel, 0, 0, 53,53);
+    image(img_wheel, 0, 0, 53,53);
     pop();
 
 
-    line(hipx, hipy, kneex, knee1); // 엉덩이부터 무릎
+    line(hipx, hipy, kneex, kneey); // 엉덩이부터 무릎
     line(kneex, knee1, x1, y1); // 무릎부터 발
     stroke(120,31,43);
     strokeWeight(feet - 6);
     line(x1 - 3, y1 + 3, x1 + 15, y1 + 3); //발
 
-    image(bike, bikex, bikey,150, 98); // 자전거
+    image(img_bike, bikex, bikey,150, 98); // 자전거
 
     stroke(30,41,138);
     strokeWeight(feet);
@@ -355,9 +483,11 @@ function drawBicycle(x, y, size) {
     strokeWeight(feet - 6);
     line(x2 - 3, y2 + 3, x2 + 15, y2 + 3);
 
-    image(body, bodyx, bodyy,86,104); // 몸통
+    image(img_body, bodyx, bodyy,86,104); // 몸통
 
-    theta += 2
+    if (!isNaN(existSum) && !isNaN(totalSum) && totalSum !== 0) {
+        theta += (10 * (1 - existSum / totalSum));
+    }
 
     pop();
 }
@@ -406,6 +536,7 @@ function drawSkyBackground(h, m) {
         stroke(c);
         line(0, dy, width, dy);
     }
+    colorMode(RGB);
 }
 
 function createUI() {
@@ -442,6 +573,10 @@ function createUI() {
 }
 
 function mouseClicked() {
+    print(totalSum, existSum);
+    print(maxPercentId, minPercentId);
+    print(existGap);
+    print(changeList);
     // print(mouseX, mouseY);
     // print(imgHeight);
     // print(imgEndY);
@@ -451,6 +586,7 @@ function mouseClicked() {
     //     let py = map(data.lat, 37.51083755, 37.5841713, imgEndY - 128 * imgHeight / 837, imgStartY + 354 * imgHeight / 837);
     //     print(px + "/" + data.lat +","+py+"/"+data.lng);
     // }
+    print(stations);
 
     // print("minLat:" + minLat + "/" + minLatItem);
     // print("maxLat:" + maxLat + "/" + maxLatItem);
