@@ -163,122 +163,85 @@ function setup() {
 }
 
 function draw() {
-    if (clicked) {
-        if (!introFinished) {
-            noStroke();
-            fill(5, 29, 57, 210);
-            circle(center2, height / 2, size);
+    introFinished = true;
+    date = new Date();
 
-            noFill();
-            stroke(48, 226, 145, 210);
-            strokeWeight(weight);
-            circle(center1, height / 2, 200);
-        }
-
-        if (frameCount < push_frame + 18) {
-            size += 80;
-            weight += 80;
-        } else if (frameCount < push_frame + 55) {
-            noStroke();
-            fill(245);
-            circle(width / 2, height / 2, size2);
-            size2 += 60;
-
-        } else {
-            introFinished = true;
-            date = new Date();
-
-            colorMode(RGB);
-            background(235);
-            drawSkyBackground(date.getHours(), date.getMinutes());
+    colorMode(RGB);
+    background(235);
+    drawSkyBackground(date.getHours(), date.getMinutes());
 
 
-            // 1분에 한 번씩 update.
+    // 1분에 한 번씩 update.
 
-            if (frameCount % (60 * 60) === 0) {
-                for (let i = 0; i < 3; i++) {
-                    let requestURL = "http://openapi.seoul.go.kr:8088/4f5a634b50657269373353434c6745/json/bikeList/" + (i * 1000 + 1) + "/" + ((i + 1) * 1000);
-                    let request = new XMLHttpRequest();
-                    request.open("GET", requestURL);
-                    request.responseType = "json";
-                    request.send();
+    if (frameCount % (60 * 60) === 0) {
+        for (let i = 0; i < 3; i++) {
+            let requestURL = "http://openapi.seoul.go.kr:8088/4f5a634b50657269373353434c6745/json/bikeList/" + (i * 1000 + 1) + "/" + ((i + 1) * 1000);
+            let request = new XMLHttpRequest();
+            request.open("GET", requestURL);
+            request.responseType = "json";
+            request.send();
 
-                    request.onload = function () {
-                        let response = request.response;
-                        for (let j = 0; j < response["rentBikeStatus"]["row"].length; j++) {
-                            let item = response["rentBikeStatus"]["row"][j];
-                            let id = item["stationName"].split(".")[0].trim();
-                            let stationName = item["stationName"].split(".")[1].trim();
-                            if (!checked_id.includes(parseInt(id))) continue;
+            request.onload = function () {
+                let response = request.response;
+                for (let j = 0; j < response["rentBikeStatus"]["row"].length; j++) {
+                    let item = response["rentBikeStatus"]["row"][j];
+                    let id = item["stationName"].split(".")[0].trim();
+                    let stationName = item["stationName"].split(".")[1].trim();
+                    if (!checked_id.includes(parseInt(id))) continue;
 
-                            let parkingCount = item["parkingBikeTotCnt"];
-                            let totalCount = item["rackTotCnt"];
-                            let lat = item["stationLatitude"];
-                            let lng = item["stationLongitude"];
+                    let parkingCount = item["parkingBikeTotCnt"];
+                    let totalCount = item["rackTotCnt"];
+                    let lat = item["stationLatitude"];
+                    let lng = item["stationLongitude"];
 
-                            if (lat > maxLat) {
-                                maxLat = lat;
-                                maxLatItem = stationName;
-                            }
-
-                            if (lat < minLat) {
-                                minLat = lat;
-                                minLatItem = stationName;
-                            }
-
-                            if (lng > maxLng) {
-                                maxLng = lng;
-                                maxLngItem = stationName;
-                            }
-
-                            if (lng < minLng) {
-                                minLng = lng;
-                                minLngItem = stationName;
-                            }
-
-                            stations.set(id, new Station(id, stationName, lat, lng, totalCount, parkingCount));
-                        }
+                    if (lat > maxLat) {
+                        maxLat = lat;
+                        maxLatItem = stationName;
                     }
+
+                    if (lat < minLat) {
+                        minLat = lat;
+                        minLatItem = stationName;
+                    }
+
+                    if (lng > maxLng) {
+                        maxLng = lng;
+                        maxLngItem = stationName;
+                    }
+
+                    if (lng < minLng) {
+                        minLng = lng;
+                        minLngItem = stationName;
+                    }
+
+                    stations.set(id, new Station(id, stationName, lat, lng, totalCount, parkingCount));
                 }
             }
-
-
-            createUI();
-
-            let opx = map(stations.get("3788").lng, 127.15859985, 126.81932831, imgEndX, imgStartX);
-            let opy = map(stations.get("3788").lat, 37.51083755, 37.5841713, imgEndY - 128 * imgHeight / 837, imgStartY + 354 * imgHeight / 837);
-
-            push();
-            translate(opx, opy);
-            rotate(-1);
-            for (let data of stations.values()) {
-                let px = map(data.lng, 127.15859985, 126.81932831, imgEndX, imgStartX);
-                let py = map(data.lat, 37.51083755, 37.5841713, imgEndY - 128 * imgHeight / 837, imgStartY + 354 * imgHeight / 837);
-                // let px = map(data.lat, 127.15859985, 126.81932831, imgEndX, imgStartX);
-                // let py = map(data.lng, 37.51083755, 37.5841713, imgEndY, imgStartY + 354 * imgHeight / 837);
-
-                fill(255, 0, 0);
-                circle(px - opx, py - opy, 10);
-                fill(0);
-                textAlign(CENTER);
-                // text(data.stationName, px - opx, py - opy - 10);
-            }
-            pop();
         }
-    } else {
-        background(255);
-        center1 = width / 2 + map(sin(frameCount / fdg), -1, 1, -120, 120);
-        center2 = width / 2 - map(sin(frameCount / fdg), -1, 1, -120, 120);
-
-        noStroke();
-        fill(5, 39, 57, 210);
-        circle(center2, height / 2, size);
-
-        noFill();
-        stroke(48, 226, 125, 210);
-        strokeWeight(weight);
-        circle(center1, height / 2, 200);
     }
+
+
+    createUI();
+
+    let opx = map(stations.get("3788").lng, 127.15859985, 126.81932831, imgEndX, imgStartX);
+    let opy = map(stations.get("3788").lat, 37.51083755, 37.5841713, imgEndY - 128 * imgHeight / 837, imgStartY + 354 * imgHeight / 837);
+
+    push();
+    translate(opx, opy);
+    rotate(-1);
+    for (let data of stations.values()) {
+        let px = map(data.lng, 127.15859985, 126.81932831, imgEndX, imgStartX);
+        let py = map(data.lat, 37.51083755, 37.5841713, imgEndY - 128 * imgHeight / 837, imgStartY + 354 * imgHeight / 837);
+        // let px = map(data.lat, 127.15859985, 126.81932831, imgEndX, imgStartX);
+        // let py = map(data.lng, 37.51083755, 37.5841713, imgEndY, imgStartY + 354 * imgHeight / 837);
+
+        fill(255, 0, 0);
+        circle(px - opx, py - opy, 10);
+        fill(0);
+        textAlign(CENTER);
+        // text(data.stationName, px - opx, py - opy - 10);
+    }
+    pop();
 
 }
 
