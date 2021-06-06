@@ -230,7 +230,7 @@ function draw() {
             //
             // // 1분에 한 번씩 update.
             //
-            if (frameCount % (5 * 60) === 0) {
+            if (frameCount % (60 * 60) === 0) {
                 let oldExistSum = existSum;
                 let oldStations = stations;
                 totalSum = 0;
